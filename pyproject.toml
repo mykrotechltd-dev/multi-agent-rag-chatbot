@@ -10,6 +10,10 @@ requires-python = ">=3.10,<4.0"
 
 dependencies = [
     "fastapi[standard]==0.122.0",
+    "qdrant-client==1.20.0",
+    "pypdf==6.21.3",
+    "python-docx==1.2.0",
+    "python-multipart==0.0.32",
     "langchain==0.3.27",
     "langchain-chroma==0.2.6",
     "langchain-community==0.3.31",

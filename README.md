@@ -85,6 +85,41 @@ The server will be available at `http://localhost:8000`
 
 - **API Docs**: http://localhost:8000/docs
 
+## Browser Chat, Sign-In, and Uploaded Sources
+
+The FastAPI app serves the chat at `/`, the sign-in page at `/login`, and the source manager at `/sources`. Chat and query APIs require a shared-password session. Source upload, listing, chunk preview, and deletion additionally require the administrator token.
+
+Create three separate random values of at least 32 characters for `CHAT_ACCESS_PASSWORD`, `CHAT_SESSION_SECRET`, and `SOURCE_ADMIN_TOKEN`. For example, run this command three times and use a different output each time:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Set the values in local `.env` and in the Vercel project's Production, Preview, and Development environments as appropriate. Never commit real secrets. Also set:
+
+```env
+QDRANT_URL=https://your-cluster.qdrant.io
+QDRANT_API_KEY=your_qdrant_api_key
+# Optional; defaults to uploaded_sources
+QDRANT_COLLECTION=uploaded_sources
+```
+
+`QDRANT_API_KEY` may be omitted for a local self-hosted Qdrant instance. The app uses the configured OpenRouter/OpenAI embedding key and `EMBEDDING_MODEL`; the Qdrant collection must use cosine distance and match that model's vector size. Uploaded chunks record the embedding model and are only searched with the same model. If you change `EMBEDDING_MODEL`, delete and re-upload those sources.
+
+The source manager accepts PDF, DOCX, TXT, and Markdown. Each upload is limited to 4 MB, 500 PDF pages, 25 MB of expanded DOCX contents, 500,000 extracted characters, and 500 chunks. Scanned PDFs are not OCR'd. The original binary is discarded after indexing; chunk text and source metadata remain in Qdrant. Vercel functions reject request bodies over 4.5 MB, which is why the app's upload limit is lower ([Vercel function limits](https://vercel.com/docs/functions/limitations)).
+
+Every signed-in user can query all uploaded source content. The agent scope selector affects which specialist searches a file; it is not per-user access control. The shared password is suitable for a private beta, not individual customer accounts. A user must sign in before searching; source-management actions also need the separate admin token.
+
+Same-origin browser requests need no CORS setting. If an external frontend must call the API, set `CORS_ALLOWED_ORIGINS` to a comma-separated list of exact origins.
+
+### Source API
+
+- `GET /api/v1/auth/session`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`
+- `GET /api/v1/sources` lists indexed files and chunk counts.
+- `POST /api/v1/sources` accepts multipart fields `file` and `scope` (`all`, `finance`, `hr`, `legal`, `tech`, or `general_knowledge`).
+- `GET /api/v1/sources/{source_id}/chunks` previews stored chunks.
+- `DELETE /api/v1/sources/{source_id}` deletes that source and its chunks.
+
 ## Running Tests
 
 The system includes a test runner that uses golden datasets to validate the chatbot's responses with automatic quality scoring via Langfuse.
@@ -138,4 +173,5 @@ python tests/test_runner.py \
 1. **Session Management**: Session IDs are generated from IP addresses, which means users behind the same NAT/proxy will share session context.
 2. **Context Window**: Conversation history is limited to the last 20 messages to prevent context bloat and maintain performance.
 3. **Vector Store**: Vector stores are preloaded at startup and stored in memory; very large knowledge bases may require additional memory resources.
+
 

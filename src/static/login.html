@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b131b">
+  <title>Sign in · JupiterIQ</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #0b131b;
+      --panel: #101b24;
+      --line: #293a45;
+      --line-strong: #3b525d;
+      --text: #f1f6f5;
+      --muted: #a2b2b8;
+      --mint: #5de0c7;
+      --mint-hover: #78ead5;
+      --danger: #ffb6a9;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      display: grid;
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      place-items: center;
+      background: radial-gradient(ellipse at 50% -18%, rgb(35 104 96 / 19%), transparent 48%), var(--page);
+      color: var(--text);
+    }
+    button, input { font: inherit; }
+    button:focus-visible, input:focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; }
+    .card {
+      width: min(100%, 430px);
+      padding: clamp(25px, 7vw, 38px);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: linear-gradient(155deg, rgb(21 35 46 / 96%), rgb(16 27 36 / 96%));
+      box-shadow: 0 24px 70px rgb(0 0 0 / 24%);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 34px; }
+    .mark {
+      display: grid;
+      width: 40px;
+      height: 40px;
+      place-items: center;
+      border: 1px solid rgb(93 224 199 / 42%);
+      border-radius: 13px;
+      background: #10231f;
+      color: var(--mint);
+      font-size: 20px;
+    }
+    .brand-name { font-size: 14px; font-weight: 750; }
+    .brand-caption { margin-top: 2px; color: var(--muted); font-size: 12px; }
+    .eyebrow { margin: 0 0 11px; color: var(--mint); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(28px, 7vw, 34px); letter-spacing: -.04em; }
+    .intro { margin: 12px 0 26px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+    label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 650; }
+    input {
+      width: 100%;
+      min-height: 48px;
+      padding: 0 13px;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      background: #0b141b;
+      color: var(--text);
+    }
+    input::placeholder { color: #738890; }
+    button {
+      width: 100%;
+      min-height: 48px;
+      margin-top: 15px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--mint);
+      color: #09211f;
+      cursor: pointer;
+      font-weight: 750;
+      transition: background 150ms ease, transform 150ms ease;
+    }
+    button:hover:not(:disabled) { background: var(--mint-hover); transform: translateY(-1px); }
+    button:disabled { cursor: wait; opacity: .65; }
+    .message { min-height: 22px; margin: 14px 0 0; color: var(--danger); font-size: 13px; line-height: 1.5; }
+    .note { margin: 22px 0 0; padding-top: 17px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">✦</span>
+      <div><div class="brand-name">JupiterIQ</div><div class="brand-caption">Knowledge assistant</div></div>
+    </div>
+    <p class="eyebrow">Private knowledge space</p>
+    <h1>Sign in to continue</h1>
+    <p class="intro">Enter the shared access password to search the organization's knowledge base.</p>
+    <form id="login-form">
+      <label for="password">Access password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required autofocus>
+      <button id="submit-button" type="submit">Sign in</button>
+      <p id="login-message" class="message" role="status" aria-live="polite"></p>
+    </form>
+    <p class="note">This space uses one shared password. Ask the workspace administrator for access.</p>
+  </main>
+  <script>
+    (() => {
+      const form = document.getElementById("login-form");
+      const password = document.getElementById("password");
+      const button = document.getElementById("submit-button");
+      const message = document.getElementById("login-message");
+      const requestedNext = new URLSearchParams(window.location.search).get("next");
+      const nextPath = requestedNext === "/sources" ? "/sources" : "/";
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const value = password.value;
+        if (!value) return;
+        button.disabled = true;
+        button.textContent = "Signing in…";
+        message.textContent = "";
+        try {
+          const response = await fetch("/api/v1/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify({ password: value }),
+          });
+          let payload = null;
+          try { payload = await response.json(); } catch { payload = null; }
+          if (!response.ok || !payload || payload.authenticated !== true) {
+            message.textContent = payload && typeof payload.detail === "string"
+              ? payload.detail
+              : "Sign-in failed. Check the password and try again.";
+            return;
+          }
+          password.value = "";
+          window.location.assign(nextPath);
+        } catch {
+          message.textContent = "Could not reach the sign-in service. Please try again.";
+        } finally {
+          button.disabled = false;
+          button.textContent = "Sign in";
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

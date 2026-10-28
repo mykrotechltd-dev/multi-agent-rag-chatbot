@@ -67,27 +67,44 @@ def _get_writable_chroma_directory(
         / "vectorstore"
         / handbook_name
     )
-    if not target_directory.exists():
-        target_directory.parent.mkdir(parents=True, exist_ok=True)
-        staging_directory = target_directory.with_name(
-            f"{target_directory.name}-{uuid.uuid4().hex}.copying"
-        )
-        try:
-            shutil.copytree(source_directory, staging_directory)
-            os.replace(staging_directory, target_directory)
-        except Exception:
-            shutil.rmtree(staging_directory, ignore_errors=True)
-            raise
+    import fcntl
 
-    # copytree preserves source permissions, which may also be read-only.
-    for root, directories, files in os.walk(target_directory):
-        os.chmod(root, os.stat(root).st_mode | stat.S_IWUSR)
-        for name in files:
-            file_path = Path(root) / name
-            os.chmod(file_path, os.stat(file_path).st_mode | stat.S_IWUSR)
-        for name in directories:
-            directory_path = Path(root) / name
-            os.chmod(directory_path, os.stat(directory_path).st_mode | stat.S_IWUSR)
+    target_directory = (
+        Path(tempfile.gettempdir())
+        / "multi-agent-rag-chatbot"
+        / "vectorstore"
+        / handbook_name
+    )
+    target_directory.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = target_directory.with_name(f"{target_directory.name}.lock")
+
+    # Concurrent cold starts can share /tmp. Lock each index copy to avoid
+    # duplicate temporary copies exhausting the function's scratch space.
+    with lock_path.open("a+") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            if not target_directory.exists():
+                staging_directory = target_directory.with_name(
+                    f"{target_directory.name}-{uuid.uuid4().hex}.copying"
+                )
+                try:
+                    shutil.copytree(source_directory, staging_directory)
+                    os.replace(staging_directory, target_directory)
+                except Exception:
+                    shutil.rmtree(staging_directory, ignore_errors=True)
+                    raise
+
+            # copytree preserves source permissions, which may be read-only.
+            for root, directories, files in os.walk(target_directory):
+                os.chmod(root, os.stat(root).st_mode | stat.S_IWUSR)
+                for name in files:
+                    file_path = Path(root) / name
+                    os.chmod(file_path, os.stat(file_path).st_mode | stat.S_IWUSR)
+                for name in directories:
+                    directory_path = Path(root) / name
+                    os.chmod(directory_path, os.stat(directory_path).st_mode | stat.S_IWUSR)
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
     return target_directory
 

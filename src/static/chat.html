@@ -662,6 +662,7 @@
       let sessionId = readSessionId();
       let messages = readHistory();
       let isBusy = false;
+      let sessionReady = false;
       const tabId = newSessionId().slice(4);
       const tabStartedAt = Date.now();
       let sessionChannel = null;
@@ -700,6 +701,7 @@
           sessionId = newSessionId();
           messages = [];
           saveState();
+          sessionReady = true;
           return;
         }
 
@@ -716,11 +718,16 @@
             }
           });
           announceSessionOwnership();
+          window.setTimeout(() => {
+            sessionReady = true;
+            updateControls();
+          }, 200);
         } catch {
           sessionChannel = null;
           sessionId = newSessionId();
           messages = [];
           saveState();
+          sessionReady = true;
         }
       }
 
@@ -816,9 +823,9 @@
       }
 
       function updateControls() {
-        elements.send.disabled = isBusy || !elements.input.value.trim();
-        elements.newChat.disabled = isBusy;
-        document.querySelectorAll("[data-prompt]").forEach((button) => { button.disabled = isBusy; });
+        elements.send.disabled = !sessionReady || isBusy || !elements.input.value.trim();
+        elements.newChat.disabled = !sessionReady || isBusy;
+        document.querySelectorAll("[data-prompt]").forEach((button) => { button.disabled = !sessionReady || isBusy; });
       }
 
       function showError() {
@@ -828,7 +835,7 @@
 
       async function sendMessage(text) {
         const query = text.trim();
-        if (!query || isBusy) return;
+        if (!query || isBusy || !sessionReady) return;
 
         elements.error.hidden = true;
         elements.liveStatus.textContent = "Message sent. JupiterIQ is preparing an answer.";
@@ -876,7 +883,7 @@
       elements.form.addEventListener("submit", (event) => {
         event.preventDefault();
         const query = elements.input.value;
-        if (!query.trim() || isBusy) return;
+        if (!query.trim() || isBusy || !sessionReady) return;
         elements.input.value = "";
         elements.input.style.height = "auto";
         updateControls();
@@ -899,13 +906,14 @@
 
       document.querySelectorAll("[data-prompt]").forEach((button) => {
         button.addEventListener("click", () => {
-          if (isBusy) return;
+          if (isBusy || !sessionReady) return;
           elements.input.value = button.dataset.prompt || "";
           elements.form.requestSubmit();
         });
       });
 
       elements.newChat.addEventListener("click", () => {
+        if (isBusy || !sessionReady) return;
         const previousSessionId = sessionId;
         sessionId = newSessionId();
         messages = [];

@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse
 
 import sys
 from pathlib import Path
@@ -41,30 +42,10 @@ def create_app() -> FastAPI:
     app.include_router(query_router)
     
     # Root endpoint
-    @app.get("/")
+    @app.get("/", response_class=HTMLResponse)
     def read_root():
-        """Root endpoint with API information."""
-        return {
-            "name": "JupiterIQ Multi-Agent RAG Chatbot",
-            "version": "0.1.0",
-            "status": "operational",
-            "endpoints": {
-                "root": {
-                    "GET /": "This endpoint - API information",
-                    "GET /health (also supports HEAD)": "Health check endpoint",
-                },
-                "query": {
-                    "POST /api/v1/query": "Process a user query through the orchestrator",
-                    "GET /api/v1/agents": "List all available specialist agents",
-                       "GET /api/v1/sessions/{session_id}/history": "Get conversation history for a session",
-                       "DELETE /api/v1/sessions/{session_id}": "Clear conversation history for a session",
-                   },
-                "docs": {
-                    "GET /docs": "Interactive API documentation (Swagger UI)",
-                    "GET /redoc": "Alternative API documentation (ReDoc)",
-                },
-            },
-        }
+        """Serve the browser chat interface."""
+        return FileResponse(src_path / "static" / "chat.html", media_type="text/html")
     
     # Health check endpoint
     @app.get("/health")
@@ -83,3 +64,4 @@ app = create_app()
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+

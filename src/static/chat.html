@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b131b">
+  <meta name="description" content="Ask JupiterIQ a question and get an answer from your knowledge base.">
+  <title>JupiterIQ · Knowledge assistant</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #0b131b;
+      --panel: #101b24;
+      --panel-raised: #15232e;
+      --panel-soft: #111e27;
+      --line: #293a45;
+      --line-strong: #3b525d;
+      --text: #f1f6f5;
+      --muted: #a2b2b8;
+      --subtle: #738890;
+      --mint: #5de0c7;
+      --mint-deep: #0c302c;
+      --mint-hover: #78ead5;
+      --danger: #ffb6a9;
+      --danger-bg: #351f20;
+      --shadow: 0 24px 70px rgb(0 0 0 / 24%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(ellipse at 50% -18%, rgb(35 104 96 / 19%), transparent 48%),
+        var(--page);
+      color: var(--text);
+    }
+
+    button, textarea { font: inherit; }
+    button { color: inherit; }
+
+    button:focus-visible,
+    textarea:focus-visible,
+    a:focus-visible,
+    summary:focus-visible {
+      outline: 3px solid var(--mint);
+      outline-offset: 3px;
+    }
+
+    .app-shell {
+      display: flex;
+      min-height: 100vh;
+      flex-direction: column;
+    }
+
+    .topbar {
+      display: flex;
+      min-height: 76px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 0 clamp(20px, 5vw, 72px);
+      border-bottom: 1px solid rgb(162 178 184 / 12%);
+      background: rgb(11 19 27 / 72%);
+    }
+
+    .brand {
+      display: inline-flex;
+      min-width: 0;
+      align-items: center;
+      gap: 12px;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid rgb(93 224 199 / 42%);
+      border-radius: 12px;
+      background: linear-gradient(145deg, #163e39, #10231f);
+      color: var(--mint);
+    }
+
+    .brand-copy { display: grid; gap: 2px; }
+    .brand-name { font-size: 15px; font-weight: 700; letter-spacing: .01em; }
+    .brand-caption { color: var(--muted); font-size: 12px; }
+
+    .topbar-actions { display: flex; align-items: center; gap: 18px; }
+
+    .service-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 12px rgb(93 224 199 / 65%);
+    }
+
+    .docs-link {
+      color: var(--muted);
+      font-size: 12px;
+      text-decoration-color: transparent;
+      text-underline-offset: 4px;
+      transition: color 150ms ease, text-decoration-color 150ms ease;
+    }
+
+    .docs-link:hover { color: var(--text); text-decoration-color: var(--mint); }
+
+    .new-chat {
+      display: inline-flex;
+      min-height: 38px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: border-color 150ms ease, background 150ms ease;
+    }
+
+    .new-chat:hover:not(:disabled) { border-color: var(--mint); background: rgb(93 224 199 / 7%); }
+    .new-chat:disabled { cursor: not-allowed; opacity: .55; }
+
+    .main {
+      display: flex;
+      width: min(100% - 40px, 920px);
+      min-height: 0;
+      flex: 1;
+      flex-direction: column;
+      align-self: center;
+      padding: clamp(34px, 7vh, 76px) 0 24px;
+    }
+
+    .welcome {
+      display: grid;
+      max-width: 760px;
+      align-content: center;
+      flex: 1;
+      margin: 0 auto;
+      padding: 24px 0 38px;
+      text-align: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      justify-self: center;
+      gap: 9px;
+      margin-bottom: 18px;
+      color: var(--mint);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow-mark { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    h1 {
+      max-width: 700px;
+      margin: 0;
+      font-size: clamp(34px, 6vw, 58px);
+      font-weight: 650;
+      letter-spacing: -.055em;
+      line-height: 1.07;
+    }
+
+    h1 span { color: var(--mint); }
+
+    .welcome-copy {
+      max-width: 510px;
+      margin: 20px auto 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .prompt-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 36px;
+      text-align: left;
+    }
+
+    .prompt-card {
+      display: flex;
+      min-height: 108px;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(155deg, rgb(21 35 46 / 88%), rgb(16 27 36 / 88%));
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 150ms ease, transform 150ms ease, background 150ms ease;
+    }
+
+    .prompt-card:hover:not(:disabled) {
+      transform: translateY(-2px);
+      border-color: rgb(93 224 199 / 60%);
+      background: #172934;
+    }
+
+    .prompt-card:disabled { cursor: not-allowed; opacity: .55; }
+    .prompt-text { font-size: 13px; font-weight: 550; line-height: 1.5; }
+    .prompt-arrow { align-self: flex-end; color: var(--mint); font-size: 16px; }
+
+    .conversation {
+      display: flex;
+      min-height: 240px;
+      flex: 1;
+      flex-direction: column;
+      gap: 24px;
+      overflow-y: auto;
+      padding: 4px 4px 30px;
+      scrollbar-color: var(--line-strong) transparent;
+      scrollbar-width: thin;
+    }
+
+    .conversation[hidden], .welcome[hidden] { display: none; }
+
+    .message {
+      display: flex;
+      max-width: 90%;
+      align-items: flex-start;
+      gap: 12px;
+      animation: arrive 180ms ease-out both;
+    }
+
+    .message-user { align-self: flex-end; flex-direction: row-reverse; }
+    .message-assistant { align-self: flex-start; }
+
+    .avatar {
+      display: grid;
+      width: 32px;
+      height: 32px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 11px;
+      background: var(--panel-raised);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 750;
+    }
+
+    .message-assistant .avatar {
+      border-color: rgb(93 224 199 / 30%);
+      background: var(--mint-deep);
+      color: var(--mint);
+    }
+
+    .message-body { min-width: 0; }
+    .message-user .message-body { display: grid; justify-items: end; }
+
+    .message-name {
+      margin: 1px 0 7px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .message-copy {
+      margin: 0;
+      padding: 13px 16px;
+      border: 1px solid var(--line);
+      border-radius: 4px 15px 15px 15px;
+      background: var(--panel);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.7;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .message-user .message-copy {
+      border-color: rgb(93 224 199 / 18%);
+      border-radius: 15px 4px 15px 15px;
+      background: var(--mint-deep);
+    }
+
+    .agent-list {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+      margin-top: 10px;
+      color: var(--subtle);
+      font-size: 10px;
+    }
+
+    .agent-chip {
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgb(21 35 46 / 68%);
+      color: var(--muted);
+    }
+
+    .sources {
+      width: fit-content;
+      max-width: 100%;
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: rgb(16 27 36 / 65%);
+    }
+
+    .sources > summary {
+      padding: 9px 12px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 650;
+      list-style-position: inside;
+    }
+
+    .source-list { display: grid; gap: 8px; padding: 0 10px 10px; }
+    .source-item { padding: 10px; border-radius: 8px; background: var(--panel-raised); }
+
+    .source-item summary {
+      color: var(--mint);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 650;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .source-copy {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.65;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .typing {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 4px 0 0 44px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .typing-dots { display: inline-flex; gap: 4px; }
+    .typing-dots i {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--mint);
+      animation: pulse 900ms infinite ease-in-out;
+    }
+
+    .typing-dots i:nth-child(2) { animation-delay: 140ms; }
+    .typing-dots i:nth-child(3) { animation-delay: 280ms; }
+    .typing[hidden] { display: none; }
+
+    .error-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin: 0 0 12px;
+      padding: 12px 14px;
+      border: 1px solid rgb(255 182 169 / 30%);
+      border-radius: 11px;
+      background: var(--danger-bg);
+      color: var(--danger);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .error-banner[hidden] { display: none; }
+
+    .composer-wrap { position: relative; margin-top: auto; }
+
+    .composer {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      padding: 10px 11px 10px 17px;
+      border: 1px solid var(--line-strong);
+      border-radius: 16px;
+      background: #111d26;
+      box-shadow: var(--shadow);
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+
+    .composer:focus-within {
+      border-color: rgb(93 224 199 / 72%);
+      box-shadow: 0 0 0 3px rgb(93 224 199 / 10%), var(--shadow);
+    }
+
+    .composer textarea {
+      width: 100%;
+      min-height: 44px;
+      max-height: 148px;
+      resize: none;
+      padding: 11px 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.55;
+      overflow-y: auto;
+    }
+
+    .composer textarea::placeholder { color: var(--subtle); opacity: 1; }
+
+    .send-button {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 0;
+      border-radius: 12px;
+      background: var(--mint);
+      color: #09211e;
+      cursor: pointer;
+      transition: background 150ms ease, transform 150ms ease, opacity 150ms ease;
+    }
+
+    .send-button:hover:not(:disabled) { transform: translateY(-1px); background: var(--mint-hover); }
+    .send-button:disabled { cursor: not-allowed; opacity: .42; }
+
+    .composer-hint {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 10px 4px 0;
+      color: var(--subtle);
+      font-size: 10px;
+      line-height: 1.5;
+    }
+
+    .composer-hint kbd {
+      padding: 2px 5px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--panel);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 9px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @keyframes arrive {
+      from { transform: translateY(5px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes pulse {
+      0%, 60%, 100% { transform: translateY(0); opacity: .42; }
+      30% { transform: translateY(-3px); opacity: 1; }
+    }
+
+    @media (max-width: 680px) {
+      .topbar { min-height: 66px; gap: 12px; padding: 0 16px; }
+      .brand-mark { width: 34px; height: 34px; }
+      .brand-caption, .service-status, .docs-link { display: none; }
+      .topbar-actions { gap: 10px; }
+      .new-chat { min-height: 36px; padding: 0 10px; }
+      .main { width: min(100% - 28px, 620px); padding: 34px 0 18px; }
+      .welcome { padding: 18px 0 26px; }
+      .welcome-copy { margin-top: 15px; font-size: 14px; }
+      .prompt-grid { grid-template-columns: 1fr; gap: 8px; margin-top: 26px; }
+      .prompt-card { min-height: 62px; flex-direction: row; align-items: center; gap: 12px; padding: 12px 14px; }
+      .prompt-arrow { flex: 0 0 auto; }
+      .conversation { gap: 18px; padding-bottom: 24px; }
+      .message { max-width: 100%; gap: 9px; }
+      .avatar { width: 29px; height: 29px; border-radius: 9px; }
+      .message-copy { padding: 11px 13px; font-size: 13px; }
+      .composer { gap: 8px; padding-left: 13px; border-radius: 14px; }
+      .composer textarea { font-size: 16px; }
+      .composer-hint { font-size: 9px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="JupiterIQ home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="21" height="21" fill="none">
+            <path d="M12 2.8 14.4 9.6 21.2 12l-6.8 2.4L12 21.2l-2.4-6.8L2.8 12l6.8-2.4L12 2.8Z" stroke="currentColor" stroke-width="1.55" stroke-linejoin="round" />
+            <circle cx="18.8" cy="5.2" r="1.25" fill="currentColor" />
+          </svg>
+        </span>
+        <span class="brand-copy">
+          <span class="brand-name">JupiterIQ</span>
+          <span class="brand-caption">Knowledge assistant</span>
+        </span>
+      </a>
+
+      <div class="topbar-actions">
+        <span class="service-status"><span class="status-dot" aria-hidden="true"></span>Ask a question</span>
+        <a class="docs-link" href="/docs" target="_blank" rel="noopener">API docs <span aria-hidden="true">↗</span></a>
+        <button class="new-chat" id="new-chat" type="button" aria-label="Start a new chat">
+          <svg aria-hidden="true" viewBox="0 0 20 20" width="15" height="15" fill="none">
+            <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          </svg>
+          New chat
+        </button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="welcome" id="welcome" aria-labelledby="welcome-heading">
+        <div class="eyebrow"><span class="eyebrow-mark" aria-hidden="true"></span>Your knowledge, in conversation</div>
+        <h1 id="welcome-heading">Good answers start<br>with <span>the right question.</span></h1>
+        <p class="welcome-copy">Ask JupiterIQ about your organization's knowledge. Your question is routed to the right specialist, with source documents alongside the answer.</p>
+
+        <div class="prompt-grid" aria-label="Suggested questions">
+          <button class="prompt-card" type="button" data-prompt="How can I update my payment method?">
+            <span class="prompt-text">How can I update my payment method?</span><span class="prompt-arrow" aria-hidden="true">↗</span>
+          </button>
+          <button class="prompt-card" type="button" data-prompt="What is the process for requesting a refund?">
+            <span class="prompt-text">What is the process for requesting a refund?</span><span class="prompt-arrow" aria-hidden="true">↗</span>
+          </button>
+          <button class="prompt-card" type="button" data-prompt="Where can I find help with my account?">
+            <span class="prompt-text">Where can I find help with my account?</span><span class="prompt-arrow" aria-hidden="true">↗</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="conversation" id="conversation" role="log" aria-label="Conversation" aria-live="off" aria-relevant="additions text" hidden></section>
+      <p class="sr-only" id="live-status" role="status" aria-live="polite" aria-atomic="true"></p>
+
+      <div class="error-banner" id="error-banner" role="alert" hidden>
+        <svg aria-hidden="true" viewBox="0 0 20 20" width="16" height="16" fill="none">
+          <circle cx="10" cy="10" r="7.25" stroke="currentColor" stroke-width="1.5" />
+          <path d="M10 6.5v4M10 13.4v.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+        </svg>
+        <span id="error-message">I couldn't get an answer just now. Please try again.</span>
+      </div>
+
+      <div class="composer-wrap">
+        <form class="composer" id="chat-form">
+          <label class="sr-only" for="message-input">Your question</label>
+          <textarea id="message-input" name="query" rows="1" maxlength="4000" placeholder="Ask anything about your knowledge base…" autocomplete="off" aria-describedby="composer-hint"></textarea>
+          <button class="send-button" id="send-button" type="submit" aria-label="Send message" disabled>
+            <svg aria-hidden="true" viewBox="0 0 22 22" width="19" height="19" fill="none">
+              <path d="M4.4 11h13.2M11.6 4.9l6.1 6.1-6.1 6.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </form>
+        <div class="composer-hint" id="composer-hint">
+          <span>Check the sources to verify key details.</span>
+          <span><kbd>Enter</kbd> send <span aria-hidden="true">·</span> <kbd>Shift</kbd> + <kbd>Enter</kbd> new line</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const SESSION_KEY = "jupiteriq.chat.session";
+      const HISTORY_KEY = "jupiteriq.chat.history";
+      const SESSION_PATTERN = /^web_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+      const elements = {
+        welcome: document.getElementById("welcome"),
+        conversation: document.getElementById("conversation"),
+        form: document.getElementById("chat-form"),
+        input: document.getElementById("message-input"),
+        send: document.getElementById("send-button"),
+        newChat: document.getElementById("new-chat"),
+        error: document.getElementById("error-banner"),
+        errorMessage: document.getElementById("error-message"),
+        liveStatus: document.getElementById("live-status"),
+      };
+
+      function storageRead(key) {
+        try { return window.sessionStorage.getItem(key); }
+        catch { return null; }
+      }
+
+      function storageWrite(key, value) {
+        try { window.sessionStorage.setItem(key, value); }
+        catch { /* The conversation remains available until this page is closed. */ }
+      }
+
+      function newSessionId() {
+        const bytes = window.crypto.getRandomValues(new Uint8Array(16));
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+        const uuid = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+        return `web_${uuid}`;
+      }
+
+      function readSessionId() {
+        const saved = storageRead(SESSION_KEY);
+        if (saved && SESSION_PATTERN.test(saved)) return saved;
+        const created = newSessionId();
+        storageWrite(SESSION_KEY, created);
+        return created;
+      }
+
+      function readHistory() {
+        try {
+          const saved = JSON.parse(storageRead(HISTORY_KEY) || "[]");
+          if (!Array.isArray(saved)) return [];
+          return saved
+            .filter((item) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
+            .slice(-80)
+            .map((item) => ({
+              role: item.role,
+              content: item.content,
+              agents: Array.isArray(item.agents) ? item.agents.filter((agent) => typeof agent === "string") : [],
+              sources: Array.isArray(item.sources) ? item.sources : [],
+            }));
+        } catch {
+          return [];
+        }
+      }
+
+      let sessionId = readSessionId();
+      let messages = readHistory();
+      let isBusy = false;
+      const tabId = newSessionId().slice(4);
+      const tabStartedAt = Date.now();
+      let sessionChannel = null;
+
+      function saveState() {
+        storageWrite(SESSION_KEY, sessionId);
+        storageWrite(HISTORY_KEY, JSON.stringify(messages.slice(-80)));
+      }
+
+      function isEarlierTab(otherTab) {
+        const otherStartedAt = Number(otherTab.startedAt);
+        if (!Number.isFinite(otherStartedAt)) return false;
+        return otherStartedAt < tabStartedAt || (otherStartedAt === tabStartedAt && otherTab.tabId < tabId);
+      }
+
+      function announceSessionOwnership() {
+        if (!sessionChannel) return;
+        sessionChannel.postMessage({ type: "claim", sessionId, tabId, startedAt: tabStartedAt });
+      }
+
+      function isolateCopiedTab() {
+        sessionId = newSessionId();
+        messages = [];
+        elements.input.value = "";
+        elements.input.style.height = "auto";
+        elements.error.hidden = true;
+        saveState();
+        render();
+        elements.liveStatus.textContent = "A fresh chat started in this tab because another tab is using the copied conversation.";
+        announceSessionOwnership();
+      }
+
+      function startSessionCoordination() {
+        if (typeof window.BroadcastChannel !== "function") {
+          // Older browsers start a fresh chat on load to avoid copied tab IDs.
+          sessionId = newSessionId();
+          messages = [];
+          saveState();
+          return;
+        }
+
+        try {
+          sessionChannel = new window.BroadcastChannel("jupiteriq-session-ownership");
+          sessionChannel.addEventListener("message", (event) => {
+            const data = event.data;
+            if (!data || data.tabId === tabId || typeof data.sessionId !== "string") return;
+
+            if (data.type === "claim" && data.sessionId === sessionId) {
+              sessionChannel.postMessage({ type: "owner", sessionId, tabId, startedAt: tabStartedAt });
+            } else if (data.type === "owner" && data.sessionId === sessionId && isEarlierTab(data)) {
+              isolateCopiedTab();
+            }
+          });
+          announceSessionOwnership();
+        } catch {
+          sessionChannel = null;
+          sessionId = newSessionId();
+          messages = [];
+          saveState();
+        }
+      }
+
+      function makeElement(tagName, className, text) {
+        const node = document.createElement(tagName);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
+      }
+
+      function sourceLabel(source, index) {
+        const metadata = source && source.metadata && typeof source.metadata === "object" ? source.metadata : {};
+        for (const key of ["title", "source", "file_name", "filename", "document"]) {
+          if (typeof metadata[key] === "string" && metadata[key].trim()) return metadata[key].trim();
+        }
+        return `Source ${index + 1}`;
+      }
+
+      function addSources(parent, sources) {
+        if (!Array.isArray(sources) || sources.length === 0) return;
+        const details = makeElement("details", "sources");
+        const summary = makeElement("summary", "", `Sources (${sources.length})`);
+        const list = makeElement("div", "source-list");
+        details.append(summary, list);
+
+        sources.forEach((source, index) => {
+          const item = document.createElement("details");
+          item.className = "source-item";
+          const label = sourceLabel(source, index);
+          const similarity = Number(source && source.similarity);
+          const match = Number.isFinite(similarity) && similarity > 0
+            ? ` · ${Math.round(similarity * 100)}% match`
+            : "";
+          const itemSummary = makeElement("summary", "", `${label}${match}`);
+          const content = typeof (source && source.content) === "string" ? source.content : "No source text available.";
+          const copy = makeElement("p", "source-copy", content);
+          item.append(itemSummary, copy);
+          list.append(item);
+        });
+
+        parent.append(details);
+      }
+
+      function renderMessage(message) {
+        const isUser = message.role === "user";
+        const article = makeElement("article", `message ${isUser ? "message-user" : "message-assistant"}`);
+        article.setAttribute("aria-label", isUser ? "Your message" : "JupiterIQ answer");
+        article.append(makeElement("div", "avatar", isUser ? "YOU" : "J"));
+
+        const body = makeElement("div", "message-body");
+        body.append(makeElement("div", "message-name", isUser ? "You" : "JupiterIQ"));
+        body.append(makeElement("p", "message-copy", message.content));
+
+        if (!isUser && Array.isArray(message.agents) && message.agents.length > 0) {
+          const agents = makeElement("div", "agent-list");
+          agents.append(makeElement("span", "", "Answered by"));
+          message.agents.forEach((agent) => agents.append(makeElement("span", "agent-chip", agent)));
+          body.append(agents);
+        }
+
+        if (!isUser) addSources(body, message.sources);
+        article.append(body);
+        return article;
+      }
+
+      function render() {
+        elements.welcome.hidden = messages.length > 0;
+        elements.conversation.hidden = messages.length === 0 && !isBusy;
+        elements.conversation.replaceChildren();
+        messages.forEach((message) => elements.conversation.append(renderMessage(message)));
+
+        if (isBusy) {
+          const typing = makeElement("div", "typing");
+          typing.setAttribute("role", "status");
+          typing.append(makeElement("span", "", "JupiterIQ is thinking"));
+          const dots = makeElement("span", "typing-dots");
+          dots.setAttribute("aria-hidden", "true");
+          dots.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
+          typing.append(dots);
+          elements.conversation.append(typing);
+        }
+
+        window.requestAnimationFrame(() => {
+          const latestMessage = elements.conversation.lastElementChild;
+          if (latestMessage) {
+            latestMessage.scrollIntoView({
+              block: "end",
+              behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+            });
+          }
+        });
+        updateControls();
+      }
+
+      function updateControls() {
+        elements.send.disabled = isBusy || !elements.input.value.trim();
+        elements.newChat.disabled = isBusy;
+        document.querySelectorAll("[data-prompt]").forEach((button) => { button.disabled = isBusy; });
+      }
+
+      function showError() {
+        elements.errorMessage.textContent = "I couldn't get an answer just now. Please check your connection and try again.";
+        elements.error.hidden = false;
+      }
+
+      async function sendMessage(text) {
+        const query = text.trim();
+        if (!query || isBusy) return;
+
+        elements.error.hidden = true;
+        elements.liveStatus.textContent = "Message sent. JupiterIQ is preparing an answer.";
+        messages.push({ role: "user", content: query, agents: [], sources: [] });
+        saveState();
+        isBusy = true;
+        render();
+
+        try {
+          const response = await fetch("/api/v1/query", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify({ query, session_id: sessionId }),
+          });
+
+          let payload = null;
+          try { payload = await response.json(); }
+          catch { payload = null; }
+
+          if (!response.ok || !payload || typeof payload.content !== "string") {
+            throw new Error("The request could not be completed.");
+          }
+
+          if (typeof payload.session_id === "string" && SESSION_PATTERN.test(payload.session_id)) {
+            sessionId = payload.session_id;
+          }
+
+          messages.push({
+            role: "assistant",
+            content: payload.content,
+            agents: Array.isArray(payload.agents_used) ? payload.agents_used : [],
+            sources: Array.isArray(payload.sources) ? payload.sources : [],
+          });
+          saveState();
+          elements.liveStatus.textContent = "JupiterIQ has replied.";
+        } catch {
+          showError();
+          elements.liveStatus.textContent = "JupiterIQ could not answer. Please try again.";
+        } finally {
+          isBusy = false;
+          render();
+        }
+      }
+
+      elements.form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const query = elements.input.value;
+        if (!query.trim() || isBusy) return;
+        elements.input.value = "";
+        elements.input.style.height = "auto";
+        updateControls();
+        void sendMessage(query);
+      });
+
+      elements.input.addEventListener("input", () => {
+        elements.input.style.height = "auto";
+        elements.input.style.height = `${Math.min(elements.input.scrollHeight, 148)}px`;
+        if (elements.input.value.trim()) elements.error.hidden = true;
+        updateControls();
+      });
+
+      elements.input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+          event.preventDefault();
+          elements.form.requestSubmit();
+        }
+      });
+
+      document.querySelectorAll("[data-prompt]").forEach((button) => {
+        button.addEventListener("click", () => {
+          if (isBusy) return;
+          elements.input.value = button.dataset.prompt || "";
+          elements.form.requestSubmit();
+        });
+      });
+
+      elements.newChat.addEventListener("click", () => {
+        const previousSessionId = sessionId;
+        sessionId = newSessionId();
+        messages = [];
+        elements.input.value = "";
+        elements.input.style.height = "auto";
+        elements.error.hidden = true;
+        saveState();
+        announceSessionOwnership();
+        render();
+        elements.input.focus();
+        void fetch(`/api/v1/sessions/${encodeURIComponent(previousSessionId)}`, { method: "DELETE" }).catch(() => {});
+      });
+
+      startSessionCoordination();
+      render();
+    })();
+  </script>
+</body>
+</html>
+

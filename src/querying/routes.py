@@ -72,8 +72,8 @@ def setup_query_routes(orchestrator: Orchestrator):
         """
         Process a user query through the orchestrator.
         
-        Session ID is automatically generated from the client's IP address
-        to maintain conversation continuity per user.
+        A browser-provided session ID is used when present. Existing API
+        clients that omit it continue to use an IP-derived session ID.
         
         The orchestrator will:
         1. Analyze the query to determine which agent(s) should handle it
@@ -82,9 +82,12 @@ def setup_query_routes(orchestrator: Orchestrator):
         4. Maintain conversation context for the session
         """
         try:
-            # Generate session ID from client IP address
-            client_ip = get_client_ip(http_request)
-            session_id = generate_session_id_from_ip(client_ip)
+            # Preserve the legacy IP-based session for API clients that omit an ID.
+            if request.session_id:
+                session_id = request.session_id
+            else:
+                client_ip = get_client_ip(http_request)
+                session_id = generate_session_id_from_ip(client_ip)
             
             # Process query through orchestrator
             response: OrchestratorResponse = await orchestrator.process_query_async(
@@ -123,7 +126,7 @@ def setup_query_routes(orchestrator: Orchestrator):
                 routing_mode=response.routing_mode.value,
                 sources=all_sources,
                 metadata=metadata_clean,
-                session_id=session_id,  # Use auto-generated session_id
+                session_id=session_id,  # Return the ID used for this request.
                 quality_score=quality_score,
                 quality_reasoning=quality_reasoning,
             )

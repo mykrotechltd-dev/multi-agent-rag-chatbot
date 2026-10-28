@@ -20,6 +20,13 @@ class QueryRequest(BaseModel):
         description="Minimum similarity threshold (0.0 to 1.0) for retrieved context. Defaults to config value.",
         example=MIN_SIMILARITY
     )
+    session_id: Optional[str] = Field(
+        default=None,
+        min_length=40,
+        max_length=40,
+        pattern=r"^web_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        description="Optional browser-generated session ID. Omit to use the IP-derived session.",
+    )
     
     class Config:
         json_schema_extra = {
@@ -56,4 +63,5 @@ class QueryResponse(BaseModel):
     session_id: str = Field(..., description="Session ID for this conversation")
     quality_score: Optional[float] = Field(None, ge=1.0, le=10.0, description="Automatic quality score (1-10) from Langfuse evaluator")
     quality_reasoning: Optional[str] = Field(None, description="Reasoning for the quality score")
+
 

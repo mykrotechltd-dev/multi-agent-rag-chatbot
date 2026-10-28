@@ -666,6 +666,7 @@
       const tabId = newSessionId().slice(4);
       const tabStartedAt = Date.now();
       let sessionChannel = null;
+      let activeRequestController = null;
 
       function saveState() {
         storageWrite(SESSION_KEY, sessionId);
@@ -684,6 +685,7 @@
       }
 
       function isolateCopiedTab() {
+        if (activeRequestController) activeRequestController.abort();
         sessionId = newSessionId();
         messages = [];
         elements.input.value = "";
@@ -837,6 +839,9 @@
         const query = text.trim();
         if (!query || isBusy || !sessionReady) return;
 
+        const requestSessionId = sessionId;
+        const requestController = typeof AbortController === "function" ? new AbortController() : null;
+        activeRequestController = requestController;
         elements.error.hidden = true;
         elements.liveStatus.textContent = "Message sent. JupiterIQ is preparing an answer.";
         messages.push({ role: "user", content: query, agents: [], sources: [] });
@@ -848,7 +853,8 @@
           const response = await fetch("/api/v1/query", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Accept": "application/json" },
-            body: JSON.stringify({ query, session_id: sessionId }),
+            body: JSON.stringify({ query, session_id: requestSessionId }),
+            ...(requestController ? { signal: requestController.signal } : {}),
           });
 
           let payload = null;
@@ -859,7 +865,9 @@
             throw new Error("The request could not be completed.");
           }
 
-          if (typeof payload.session_id === "string" && SESSION_PATTERN.test(payload.session_id)) {
+          if (sessionId !== requestSessionId) return;
+
+          if (payload.session_id === requestSessionId && SESSION_PATTERN.test(payload.session_id)) {
             sessionId = payload.session_id;
           }
 
@@ -872,9 +880,12 @@
           saveState();
           elements.liveStatus.textContent = "JupiterIQ has replied.";
         } catch {
-          showError();
-          elements.liveStatus.textContent = "JupiterIQ could not answer. Please try again.";
+          if (sessionId === requestSessionId) {
+            showError();
+            elements.liveStatus.textContent = "JupiterIQ could not answer. Please try again.";
+          }
         } finally {
+          if (activeRequestController === requestController) activeRequestController = null;
           isBusy = false;
           render();
         }

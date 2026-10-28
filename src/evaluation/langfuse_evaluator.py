@@ -1,6 +1,5 @@
 """Langfuse-based evaluator for automatic RAG response quality scoring."""
 
-import os
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
@@ -11,6 +10,8 @@ from langchain_core.output_parsers import JsonOutputParser
 from langfuse import get_client
 from langfuse import observe
 from utils.langfuse_config import configure_langfuse_environment
+from utils.model_provider import get_model_api_config
+from config import LLM_MODEL
 
 # Load environment variables
 load_dotenv()
@@ -31,12 +32,12 @@ class LangfuseEvaluator:
     Uses Langfuse's built-in evaluation capabilities to score responses on a 1-10 scale.
     """
     
-    def __init__(self, llm_model: str = "gpt-4o-mini"):
+    def __init__(self, llm_model: str = LLM_MODEL):
         """
         Initialize the Langfuse evaluator.
         
         Args:
-            llm_model: LLM model to use as judge (default: gpt-4o-mini)
+            llm_model: LLM model to use as judge (default: configured LLM_MODEL)
         """
         self.llm_model = llm_model
         
@@ -52,21 +53,18 @@ class LangfuseEvaluator:
     
     def _initialize_judge_llm(self):
         """Initialize the LLM that will act as judge."""
-        api_key = os.getenv("OPENAI_API_KEY")
-        base_url = os.getenv("OPENAI_API_BASE")
-        
-        if base_url:
-            self.judge_llm = ChatOpenAI(
-                model=self.llm_model,
-                openai_api_key=api_key,
-                openai_api_base=base_url,
-                temperature=0.0,  # Deterministic scoring
+        api_key, base_url = get_model_api_config()
+        if not api_key:
+            raise ValueError(
+                "No model API key found. Set OPENROUTER_API_KEY or OPENAI_API_KEY."
             )
-        else:
-            self.judge_llm = ChatOpenAI(
-                model=self.llm_model,
-                temperature=0.0,  # Deterministic scoring
-            )
+
+        self.judge_llm = ChatOpenAI(
+            model=self.llm_model,
+            openai_api_key=api_key,
+            openai_api_base=base_url,
+            temperature=0.0,  # Deterministic scoring
+        )
     
     def _create_evaluation_prompt(self):
         """Create the evaluation prompt for LLM-as-a-Judge."""

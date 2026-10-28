@@ -13,48 +13,35 @@ from langchain_community.vectorstores import FAISS
 load_dotenv()
 
 from config import (
-    OPENAI_MODEL,
+    EMBEDDING_MODEL,
     VECTOR_STORE_TYPE,
     VECTOR_STORE_PATH,
 )
+from utils.model_provider import get_model_api_config
 
 
 def _initialize_embeddings_model():
     """
-    Initialize OpenAI embeddings model.
-    Supports both OpenAI and OpenRouter (via OPENAI_API_BASE).
+    Initialize the configured OpenAI-compatible embeddings model.
     
     Returns:
         Initialized OpenAIEmbeddings model.
     
     Raises:
-        ValueError: If OPENAI_API_KEY is not set.
+        ValueError: If no model API key is set.
     """
-    # Check for OpenAI API key
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key, base_url = get_model_api_config()
     if not api_key:
         raise ValueError(
-            "OPENAI_API_KEY not found. Set it as an environment variable."
+            "No model API key found. Set OPENROUTER_API_KEY or OPENAI_API_KEY."
         )
-    
-    # Check for OpenRouter base URL
-    base_url = os.getenv("OPENAI_API_BASE")
-    
-    # Initialize embeddings model
-    if base_url:
-        # Using OpenRouter or custom OpenAI-compatible endpoint
-        print(f"Using OpenAI-compatible API at {base_url}")
-        embeddings_model = OpenAIEmbeddings(
-            model=OPENAI_MODEL,
-            openai_api_key=api_key,
-            openai_api_base=base_url,
-        )
-    else:
-        # Using standard OpenAI API
-        print("Using OpenAI API")
-        embeddings_model = OpenAIEmbeddings(model=OPENAI_MODEL)
-    
-    return embeddings_model
+
+    print(f"Using embeddings API at {base_url or 'https://api.openai.com/v1'}")
+    return OpenAIEmbeddings(
+        model=EMBEDDING_MODEL,
+        openai_api_key=api_key,
+        openai_api_base=base_url,
+    )
 
 
 def generate_embeddings(

@@ -22,11 +22,13 @@ JSONL_DIR = DATA_DIR / "jsonl"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 100  # 10% of CHUNK_SIZE
 
-# Embedding model configuration
-OPENAI_MODEL = "text-embedding-ada-002"
+# Keep the existing embedding model so persisted vectors remain compatible.
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "openai/text-embedding-ada-002")
+# Backwards-compatible alias for older imports.
+OPENAI_MODEL = EMBEDDING_MODEL
 
 # LLM configuration for routing
-LLM_MODEL = "gpt-4o-mini"  # Model for orchestrator routing decisions
+LLM_MODEL = os.getenv("LLM_MODEL", "openai/gpt-4o-mini")
 
 # Vector store configuration
 VECTOR_STORE_TYPE = "chroma"  # Options: "chroma" or "faiss"

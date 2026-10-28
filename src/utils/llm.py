@@ -1,11 +1,11 @@
 """Utility functions for LLM initialization."""
 
-import os
-from typing import Optional, List
+from typing import Optional
 
 from langchain_openai import ChatOpenAI
 from langfuse.langchain import CallbackHandler
 from utils.langfuse_config import configure_langfuse_environment
+from utils.model_provider import get_model_api_config
 
 
 def initialize_llm(
@@ -18,33 +18,28 @@ def initialize_llm(
     """
     Initialize a ChatOpenAI LLM instance with Langfuse instrumentation.
     
-    Supports both OpenAI and OpenRouter (via OPENAI_API_BASE).
+    Uses OpenRouter when OPENROUTER_API_KEY is configured, with legacy
+    OpenAI environment variables supported as a fallback.
     
     Args:
         model: LLM model name (e.g., "gpt-4o-mini")
         langfuse_handler: Optional Langfuse callback handler. If None, creates a new one.
         temperature: Temperature for the LLM (default: 0.0)
-        api_key: Optional API key. If None, reads from OPENAI_API_KEY env var.
-        base_url: Optional base URL. If None, reads from OPENAI_API_BASE env var.
+        api_key: Optional API key. If None, reads from the provider environment.
+        base_url: Optional base URL. If None, uses the configured provider URL.
     
     Returns:
         Initialized ChatOpenAI instance.
     
     Raises:
-        ValueError: If OPENAI_API_KEY is not found.
+        ValueError: If no provider API key is configured.
     """
-    # Get API key
-    if api_key is None:
-        api_key = os.getenv("OPENAI_API_KEY")
-    
+    api_key, base_url = get_model_api_config(api_key=api_key, base_url=base_url)
+
     if not api_key:
         raise ValueError(
-            "OPENAI_API_KEY not found. Set it as an environment variable or pass api_key parameter."
+            "No model API key found. Set OPENROUTER_API_KEY or OPENAI_API_KEY."
         )
-    
-    # Get base URL (for OpenRouter support)
-    if base_url is None:
-        base_url = os.getenv("OPENAI_API_BASE")
     
     # Initialize Langfuse handler if not provided
     # CallbackHandler reads from environment variables automatically
@@ -52,23 +47,12 @@ def initialize_llm(
         configure_langfuse_environment()
         langfuse_handler = CallbackHandler()
     
-    # Initialize LLM
-    if base_url:
-        # Using OpenRouter or custom OpenAI-compatible endpoint
-        llm = ChatOpenAI(
-            model=model,
-            openai_api_key=api_key,
-            openai_api_base=base_url,
-            callbacks=[langfuse_handler],
-            temperature=temperature,
-        )
-    else:
-        # Using standard OpenAI API
-        llm = ChatOpenAI(
-            model=model,
-            callbacks=[langfuse_handler],
-            temperature=temperature,
-        )
-    
-    return llm
+    # ChatOpenAI uses OpenRouter's OpenAI-compatible API when base_url is set.
+    return ChatOpenAI(
+        model=model,
+        openai_api_key=api_key,
+        openai_api_base=base_url,
+        callbacks=[langfuse_handler],
+        temperature=temperature,
+    )
 

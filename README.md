@@ -20,26 +20,22 @@ A multi-agent RAG (Retrieval Augmented Generation) chatbot system for JupiterIQ 
 
 ## API Key Setup
 
-1. You can run this app with either openAI key or [OpenRouter](https://openrouter.ai/) key
-   - Sign up for an account at OpenRouter or OpenAI
-   - Navigate to API Keys section
-   - Create a new API key
+1. Create an API key in [OpenRouter](https://openrouter.ai/).
 
    You will also need to setup [langfuse](https://cloud.langfuse.com/)
    - sign up on langfuse
    - creat a project and get your keys (secret and private key)
 
 
-2. Add your API keys to the `.env` file:
+2. Add your keys to the `.env` file:
    ```bash
-   OPENAI_API_KEY=your_api_key_here
+   OPENROUTER_API_KEY=your_openrouter_api_key_here
    LANGFUSE_PUBLIC_KEY=langfuse_public_key
    LANGFUSE_SECRET_KEY=langfuse_secret_key
    ```
-   if you are using OpenRouter you will also need to add a Base url in your env
-    ```bash
-   OPENAI_API_BASE=https://openrouter.ai/api/v1
-   ```
+   OpenRouter uses `https://openrouter.ai/api/v1` by default. The existing vector
+   store keeps using the same Ada 002 embedding model, so it does not need to be
+   rebuilt for this provider change. Rebuild it if you change `EMBEDDING_MODEL`.
 
 ## Starting Local Server Setup
 

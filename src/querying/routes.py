@@ -133,6 +133,12 @@ def setup_query_routes(orchestrator: Orchestrator):
                 status_code=500,
                 detail=f"Error processing query: {str(e)}"
             )
+        finally:
+            # Flush buffered spans before a serverless invocation can be frozen.
+            try:
+                orchestrator.langfuse.flush()
+            except Exception as flush_error:
+                print(f"Warning: Failed to flush Langfuse traces: {flush_error}")
     
     @router.get("/agents")
     def list_agents():

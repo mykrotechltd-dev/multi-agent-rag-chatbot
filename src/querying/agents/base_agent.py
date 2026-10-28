@@ -22,6 +22,7 @@ from config import LLM_MODEL, MIN_SIMILARITY, DEFAULT_K
 from indexing.embeddings import load_vector_store
 from querying.tools.rag_tool import get_rag_tools_for_agent
 from utils.llm import initialize_llm
+from utils.langfuse_config import configure_langfuse_environment
 
 
 @dataclass
@@ -61,6 +62,7 @@ class BaseAgent(ABC):
         
         # Initialize Langfuse callback handler
         # CallbackHandler reads from environment variables automatically
+        configure_langfuse_environment()
         self.langfuse_handler = CallbackHandler()
         
         # Initialize LLM

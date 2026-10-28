@@ -8,8 +8,9 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
-from langfuse import Langfuse
+from langfuse import get_client
 from langfuse import observe
+from utils.langfuse_config import configure_langfuse_environment
 
 # Load environment variables
 load_dotenv()
@@ -39,12 +40,9 @@ class LangfuseEvaluator:
         """
         self.llm_model = llm_model
         
-        # Initialize Langfuse client
-        self.langfuse = Langfuse(
-            public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-            secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-            host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
-        )
+        # Reuse the client shared by the orchestrator and LangChain callbacks.
+        configure_langfuse_environment()
+        self.langfuse = get_client()
         
         # Initialize judge LLM
         self._initialize_judge_llm()

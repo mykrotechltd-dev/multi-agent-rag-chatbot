@@ -5,6 +5,7 @@ from typing import Optional, List
 
 from langchain_openai import ChatOpenAI
 from langfuse.langchain import CallbackHandler
+from utils.langfuse_config import configure_langfuse_environment
 
 
 def initialize_llm(
@@ -48,6 +49,7 @@ def initialize_llm(
     # Initialize Langfuse handler if not provided
     # CallbackHandler reads from environment variables automatically
     if langfuse_handler is None:
+        configure_langfuse_environment()
         langfuse_handler = CallbackHandler()
     
     # Initialize LLM

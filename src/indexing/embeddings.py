@@ -24,7 +24,7 @@ from config import (
 from utils.model_provider import get_model_api_config
 
 
-def _initialize_embeddings_model():
+def initialize_embeddings_model():
     """
     Initialize the configured OpenAI-compatible embeddings model.
     
@@ -132,7 +132,7 @@ def generate_embeddings(
         ValueError: If OPENAI_API_KEY is not set.
     """
     # Initialize embeddings model (supports OpenAI and OpenRouter)
-    embeddings_model = _initialize_embeddings_model()
+    embeddings_model = initialize_embeddings_model()
     
     # Create vector store
     if vector_store_type is None:
@@ -213,7 +213,7 @@ def load_vector_store(
         ValueError: If OPENAI_API_KEY is not set.
     """
     # Initialize embeddings model (supports OpenAI and OpenRouter)
-    embeddings_model = _initialize_embeddings_model()
+    embeddings_model = initialize_embeddings_model()
     
     if vector_store_type is None:
         vector_store_type = VECTOR_STORE_TYPE
@@ -286,6 +286,7 @@ def generate_embedding_for_text(text: str) -> List[float]:
         ValueError: If OPENAI_API_KEY is not set.
     """
     # Initialize embeddings model (supports OpenAI and OpenRouter)
-    embeddings_model = _initialize_embeddings_model()
+    embeddings_model = initialize_embeddings_model()
     
     return embeddings_model.embed_query(text)
+

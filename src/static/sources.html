@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b131b">
+  <title>Manage sources · JupiterIQ</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #0b131b;
+      --panel: #101b24;
+      --raised: #15232e;
+      --line: #293a45;
+      --line-strong: #3b525d;
+      --text: #f1f6f5;
+      --muted: #a2b2b8;
+      --subtle: #738890;
+      --mint: #5de0c7;
+      --mint-deep: #0c302c;
+      --danger: #ffb6a9;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { min-width: 320px; min-height: 100vh; margin: 0; background: radial-gradient(ellipse at 50% -18%, rgb(35 104 96 / 19%), transparent 48%), var(--page); color: var(--text); }
+    button, input, select { font: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; }
+    .topbar { display: flex; min-height: 72px; align-items: center; justify-content: space-between; gap: 18px; padding: 0 clamp(18px, 5vw, 64px); border-bottom: 1px solid rgb(162 178 184 / 12%); background: rgb(11 19 27 / 72%); }
+    .brand { display: inline-flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
+    .brand-mark { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid rgb(93 224 199 / 42%); border-radius: 12px; background: linear-gradient(145deg, #163e39, #10231f); color: var(--mint); }
+    .brand-name { font-size: 14px; font-weight: 750; }
+    .brand-caption { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .nav-actions { display: flex; align-items: center; gap: 14px; }
+    .nav-link { color: var(--muted); font-size: 12px; text-underline-offset: 4px; }
+    .nav-link:hover { color: var(--text); text-decoration-color: var(--mint); }
+    .sign-out { min-height: 36px; padding: 0 11px; border: 1px solid var(--line-strong); border-radius: 9px; background: transparent; color: var(--text); cursor: pointer; font-size: 12px; }
+    .sign-out:hover { border-color: var(--mint); }
+    main { width: min(100% - 36px, 1000px); margin: 0 auto; padding: clamp(34px, 7vh, 70px) 0 48px; }
+    .page-heading { margin-bottom: 30px; }
+    .eyebrow { margin: 0 0 11px; color: var(--mint); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(30px, 6vw, 44px); letter-spacing: -.045em; }
+    .lead { max-width: 690px; margin: 12px 0 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
+    .panel { margin-top: 22px; padding: clamp(18px, 3vw, 28px); border: 1px solid var(--line); border-radius: 16px; background: rgb(16 27 36 / 88%); }
+    .panel-heading { margin: 0 0 7px; font-size: 16px; }
+    .panel-copy { margin: 0 0 18px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .token-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+    label { display: block; margin-bottom: 7px; color: var(--muted); font-size: 12px; font-weight: 650; }
+    input, select { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 9px; background: #0b141b; color: var(--text); }
+    input::placeholder { color: var(--subtle); }
+    button.primary { min-height: 44px; padding: 0 16px; border: 0; border-radius: 9px; background: var(--mint); color: #09211f; cursor: pointer; font-size: 12px; font-weight: 750; }
+    button.primary:hover:not(:disabled) { background: #78ead5; }
+    button:disabled { cursor: wait; opacity: .6; }
+    .form-grid { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 14px; margin-top: 18px; }
+    .drop-zone { display: grid; min-height: 156px; align-content: center; justify-items: center; gap: 7px; padding: 20px; border: 1px dashed var(--line-strong); border-radius: 12px; background: rgb(11 20 27 / 58%); color: var(--text); text-align: center; cursor: pointer; transition: border-color 150ms ease, background 150ms ease; }
+    .drop-zone:hover, .drop-zone.is-dragging { border-color: var(--mint); background: rgb(93 224 199 / 5%); }
+    .drop-icon { color: var(--mint); font-size: 23px; }
+    .drop-title { font-size: 13px; font-weight: 650; }
+    .drop-copy { color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .selected-file { max-width: 100%; overflow-wrap: anywhere; color: var(--mint); font-size: 12px; }
+    .scope-field { align-self: start; }
+    .scope-note { margin: 8px 0 0; color: var(--subtle); font-size: 11px; line-height: 1.5; }
+    .upload-row { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+    .upload-row .primary { min-width: 140px; }
+    .status { min-height: 22px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .status.error { color: var(--danger); }
+    .status.success { color: var(--mint); }
+    .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+    .section-heading h2 { margin: 0; font-size: 18px; }
+    .count { color: var(--muted); font-size: 12px; }
+    .source-list { display: grid; gap: 10px; }
+    .source-card { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: #0d171f; }
+    .source-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+    .source-name { margin: 0; overflow-wrap: anywhere; font-size: 14px; font-weight: 700; }
+    .source-meta { display: flex; flex-wrap: wrap; gap: 7px 12px; margin-top: 7px; color: var(--muted); font-size: 11px; }
+    .source-actions { display: flex; flex: 0 0 auto; gap: 8px; }
+    .small-button { min-height: 34px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: transparent; color: var(--text); cursor: pointer; font-size: 11px; }
+    .small-button:hover:not(:disabled) { border-color: var(--mint); }
+    .small-button.delete:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); }
+    .chunk-list { display: grid; gap: 8px; margin-top: 14px; }
+    .chunk-card { padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); }
+    .chunk-heading { margin: 0 0 8px; color: var(--mint); font-size: 11px; font-weight: 700; }
+    .chunk-text { margin: 0; color: #dbe6e5; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .empty { padding: 25px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); font-size: 13px; text-align: center; }
+    .footnote { margin: 16px 0 0; color: var(--subtle); font-size: 11px; line-height: 1.6; }
+    @media (max-width: 620px) {
+      .topbar { min-height: 64px; padding-inline: 16px; }
+      .brand-caption { display: none; }
+      .nav-actions { gap: 11px; }
+      .nav-link { font-size: 11px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .scope-field { max-width: none; }
+      .source-top { display: grid; }
+      .source-actions { justify-content: flex-start; }
+      .upload-row { align-items: flex-start; flex-direction: column; }
+      .upload-row .primary { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="JupiterIQ chat">
+      <span class="brand-mark" aria-hidden="true">✦</span>
+      <span><span class="brand-name">JupiterIQ</span><span class="brand-caption" style="display:block">Source manager</span></span>
+    </a>
+    <nav class="nav-actions" aria-label="Main navigation">
+      <a class="nav-link" href="/">Back to chat</a>
+      <button class="sign-out" id="sign-out" type="button">Sign out</button>
+    </nav>
+  </header>
+
+  <main>
+    <div class="page-heading">
+      <p class="eyebrow">Knowledge base</p>
+      <h1>Manage source files</h1>
+      <p class="lead">Upload a document to extract and index its chunks in Qdrant. Uploaded text becomes searchable in chat after indexing finishes.</p>
+    </div>
+
+    <section class="panel" aria-labelledby="admin-heading">
+      <h2 class="panel-heading" id="admin-heading">Administrator access</h2>
+      <p class="panel-copy">Enter the source-management token. It stays in this page's memory and is sent only to this site's source API.</p>
+      <div class="token-row">
+        <div>
+          <label for="admin-token">Admin token</label>
+          <input id="admin-token" type="password" autocomplete="off" spellcheck="false" placeholder="Paste the source-management token">
+        </div>
+        <button class="primary" id="load-sources" type="button" style="align-self:end">Unlock</button>
+      </div>
+      <p class="status" id="admin-status" role="status" aria-live="polite">Enter the admin token to view or change indexed sources.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="upload-heading">
+      <h2 class="panel-heading" id="upload-heading">Add a source</h2>
+      <p class="panel-copy">PDF, DOCX, TXT, and Markdown are supported. Files must be 4 MB or smaller and produce no more than 500 chunks.</p>
+      <div class="form-grid">
+        <label class="drop-zone" id="drop-zone" for="file-input">
+          <span class="drop-icon" aria-hidden="true">↑</span>
+          <span class="drop-title">Choose a file or drop it here</span>
+          <span class="drop-copy">Text-based PDF, DOCX, TXT, or MD</span>
+          <span class="selected-file" id="selected-file">No file selected</span>
+          <input id="file-input" type="file" accept=".pdf,.docx,.txt,.md" hidden>
+        </label>
+        <div class="scope-field">
+          <label for="source-scope">Available to agents</label>
+          <select id="source-scope">
+            <option value="all">All agents</option>
+            <option value="finance">Finance</option>
+            <option value="hr">HR</option>
+            <option value="legal">Legal</option>
+            <option value="tech">Tech</option>
+            <option value="general_knowledge">General knowledge</option>
+          </select>
+          <p class="scope-note">This setting guides retrieval by agent; every signed-in user can still ask about all uploaded files.</p>
+        </div>
+      </div>
+      <div class="upload-row">
+        <button class="primary" id="upload-button" type="button" disabled>Upload and index</button>
+        <p class="status" id="upload-status" role="status" aria-live="polite"></p>
+      </div>
+      <p class="footnote">Scanned PDFs are not OCR'd. The original file is discarded after indexing; extracted chunks and source metadata remain in Qdrant.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="sources-heading">
+      <div class="section-heading">
+        <h2 id="sources-heading">Indexed sources</h2>
+        <span class="count" id="source-count">Not loaded</span>
+      </div>
+      <div class="source-list" id="source-list" aria-live="polite">
+        <div class="empty">Unlock administrator access to view indexed sources.</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const tokenInput = document.getElementById("admin-token");
+      const loadButton = document.getElementById("load-sources");
+      const adminStatus = document.getElementById("admin-status");
+      const fileInput = document.getElementById("file-input");
+      const dropZone = document.getElementById("drop-zone");
+      const selectedFile = document.getElementById("selected-file");
+      const uploadButton = document.getElementById("upload-button");
+      const uploadStatus = document.getElementById("upload-status");
+      const scopeSelect = document.getElementById("source-scope");
+      const sourceList = document.getElementById("source-list");
+      const sourceCount = document.getElementById("source-count");
+      let selectedUpload = null;
+      let sourcesLoaded = false;
+
+      function setStatus(element, text, state = "") {
+        element.textContent = text;
+        element.classList.remove("error", "success");
+        if (state) element.classList.add(state);
+      }
+
+      function adminHeaders() {
+        const token = tokenInput.value.trim();
+        if (!token) throw new Error("Enter the administrator token first.");
+        return { "Authorization": `Bearer ${token}`, "Accept": "application/json" };
+      }
+
+      async function readResponse(response) {
+        let payload = null;
+        try { payload = await response.json(); } catch { payload = null; }
+        if (!response.ok) {
+          const detail = payload && typeof payload.detail === "string" ? payload.detail : "The request could not be completed.";
+          if (response.status === 401) window.location.assign("/login?next=%2Fsources");
+          throw new Error(detail);
+        }
+        return payload || {};
+      }
+
+      function humanDate(value) {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? "Date unavailable" : date.toLocaleString();
+      }
+
+      function scopeLabel(scope) {
+        const labels = { all: "All agents", finance: "Finance", hr: "HR", legal: "Legal", tech: "Tech", general_knowledge: "General knowledge" };
+        return labels[scope] || "All agents";
+      }
+
+      function makeChunkCard(chunk) {
+        const card = document.createElement("article");
+        card.className = "chunk-card";
+        const heading = document.createElement("h3");
+        heading.className = "chunk-heading";
+        heading.textContent = `Chunk ${Number(chunk.chunk_index) + 1}`;
+        const content = document.createElement("p");
+        content.className = "chunk-text";
+        content.textContent = typeof chunk.content === "string" ? chunk.content : "";
+        card.append(heading, content);
+        return card;
+      }
+
+      function makeSourceCard(source) {
+        const card = document.createElement("article");
+        card.className = "source-card";
+        const top = document.createElement("div");
+        top.className = "source-top";
+        const information = document.createElement("div");
+        const name = document.createElement("h3");
+        name.className = "source-name";
+        name.textContent = typeof source.filename === "string" ? source.filename : "Untitled source";
+        const metadata = document.createElement("div");
+        metadata.className = "source-meta";
+        [
+          `${Number(source.chunk_count) || 0} chunks`,
+          scopeLabel(source.scope),
+          String(source.file_format || "file").toUpperCase(),
+          humanDate(source.uploaded_at),
+        ].forEach((value) => {
+          const item = document.createElement("span");
+          item.textContent = value;
+          metadata.append(item);
+        });
+        information.append(name, metadata);
+
+        const actions = document.createElement("div");
+        actions.className = "source-actions";
+        const previewButton = document.createElement("button");
+        previewButton.className = "small-button";
+        previewButton.type = "button";
+        previewButton.textContent = "Preview chunks";
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "small-button delete";
+        deleteButton.type = "button";
+        deleteButton.textContent = "Delete source";
+        actions.append(previewButton, deleteButton);
+        top.append(information, actions);
+
+        const chunks = document.createElement("div");
+        chunks.className = "chunk-list";
+        chunks.hidden = true;
+        previewButton.addEventListener("click", async () => {
+          if (!chunks.hidden) {
+            chunks.hidden = true;
+            previewButton.textContent = "Preview chunks";
+            return;
+          }
+          previewButton.disabled = true;
+          previewButton.textContent = "Loading…";
+          try {
+            const payload = await readResponse(await fetch(`/api/v1/sources/${encodeURIComponent(source.source_id)}/chunks`, { headers: adminHeaders() }));
+            chunks.replaceChildren();
+            (Array.isArray(payload.chunks) ? payload.chunks : []).forEach((chunk) => chunks.append(makeChunkCard(chunk)));
+            if (!chunks.childElementCount) {
+              const empty = document.createElement("p");
+              empty.className = "status";
+              empty.textContent = "No chunks are available for preview.";
+              chunks.append(empty);
+            }
+            chunks.hidden = false;
+            previewButton.textContent = "Hide chunks";
+          } catch (error) {
+            setStatus(adminStatus, error.message || "Chunks could not be loaded.", "error");
+            previewButton.textContent = "Preview chunks";
+          } finally {
+            previewButton.disabled = false;
+          }
+        });
+
+        deleteButton.addEventListener("click", async () => {
+          const filename = typeof source.filename === "string" ? source.filename : "this source";
+          if (!window.confirm(`Delete ${filename} and all of its chunks?`)) return;
+          deleteButton.disabled = true;
+          try {
+            await readResponse(await fetch(`/api/v1/sources/${encodeURIComponent(source.source_id)}`, {
+              method: "DELETE",
+              headers: adminHeaders(),
+            }));
+            setStatus(adminStatus, `Deleted ${filename}.`, "success");
+            await loadSources();
+          } catch (error) {
+            setStatus(adminStatus, error.message || "The source could not be deleted.", "error");
+          } finally {
+            deleteButton.disabled = false;
+          }
+        });
+
+        card.append(top, chunks);
+        return card;
+      }
+
+      async function loadSources() {
+        loadButton.disabled = true;
+        setStatus(adminStatus, "Loading indexed sources…");
+        try {
+          const payload = await readResponse(await fetch("/api/v1/sources", { headers: adminHeaders() }));
+          const sources = Array.isArray(payload.sources) ? payload.sources : [];
+          sourceList.replaceChildren();
+          if (!sources.length) {
+            const empty = document.createElement("div");
+            empty.className = "empty";
+            empty.textContent = "No source files have been indexed yet.";
+            sourceList.append(empty);
+          } else {
+            sources.forEach((source) => sourceList.append(makeSourceCard(source)));
+          }
+          sourceCount.textContent = `${sources.length} ${sources.length === 1 ? "source" : "sources"}`;
+          sourcesLoaded = true;
+          setStatus(adminStatus, "Administrator access is ready.", "success");
+        } catch (error) {
+          sourcesLoaded = false;
+          sourceCount.textContent = "Not loaded";
+          sourceList.replaceChildren();
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.textContent = "Unlock administrator access to view indexed sources.";
+          sourceList.append(empty);
+          setStatus(adminStatus, error.message || "Sources could not be loaded.", "error");
+        } finally {
+          loadButton.disabled = false;
+        }
+      }
+
+      function selectFile(file) {
+        selectedUpload = file || null;
+        selectedFile.textContent = selectedUpload ? `${selectedUpload.name} · ${(selectedUpload.size / (1024 * 1024)).toFixed(2)} MB` : "No file selected";
+        uploadButton.disabled = !selectedUpload;
+        setStatus(uploadStatus, "");
+      }
+
+      fileInput.addEventListener("change", () => selectFile(fileInput.files && fileInput.files[0]));
+      ["dragenter", "dragover"].forEach((name) => dropZone.addEventListener(name, (event) => {
+        event.preventDefault();
+        dropZone.classList.add("is-dragging");
+      }));
+      ["dragleave", "drop"].forEach((name) => dropZone.addEventListener(name, (event) => {
+        event.preventDefault();
+        dropZone.classList.remove("is-dragging");
+      }));
+      dropZone.addEventListener("drop", (event) => selectFile(event.dataTransfer && event.dataTransfer.files[0]));
+      loadButton.addEventListener("click", () => void loadSources());
+      tokenInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") void loadSources();
+      });
+
+      uploadButton.addEventListener("click", async () => {
+        if (!selectedUpload) return;
+        uploadButton.disabled = true;
+        setStatus(uploadStatus, "Uploading, extracting, and indexing chunks…");
+        try {
+          const formData = new FormData();
+          formData.append("file", selectedUpload);
+          formData.append("scope", scopeSelect.value);
+          const headers = adminHeaders();
+          delete headers.Accept;
+          const payload = await readResponse(await fetch("/api/v1/sources", {
+            method: "POST",
+            headers,
+            body: formData,
+          }));
+          const source = payload.source || {};
+          const filename = typeof source.filename === "string" ? source.filename : "The file";
+          const chunks = Number(source.chunk_count) || 0;
+          setStatus(uploadStatus, `${filename} indexed into ${chunks} chunks.`, "success");
+          selectFile(null);
+          fileInput.value = "";
+          if (sourcesLoaded) await loadSources();
+        } catch (error) {
+          setStatus(uploadStatus, error.message || "The file could not be indexed.", "error");
+          uploadButton.disabled = !selectedUpload;
+        }
+      });
+
+      document.getElementById("sign-out").addEventListener("click", async () => {
+        try { await fetch("/api/v1/auth/logout", { method: "POST" }); } catch { /* Continue to the sign-in page. */ }
+        window.location.assign("/login");
+      });
+
+      fetch("/api/v1/auth/session", { headers: { "Accept": "application/json" } })
+        .then((response) => { if (!response.ok) window.location.assign("/login?next=%2Fsources"); return response.json(); })
+        .then((payload) => { if (!payload.authenticated) window.location.assign("/login?next=%2Fsources"); })
+        .catch(() => window.location.assign("/login?next=%2Fsources"));
+    })();
+  </script>
+</body>
+</html>

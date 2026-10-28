@@ -19,8 +19,9 @@ from langchain_chroma import Chroma
 from langchain_community.vectorstores import FAISS
 
 from config import LLM_MODEL, MIN_SIMILARITY, DEFAULT_K
-from indexing.embeddings import load_vector_store
+from indexing.embeddings import generate_embedding_for_text, load_vector_store
 from querying.tools.rag_tool import get_rag_tools_for_agent
+from querying.tools.qdrant_source_store import get_qdrant_source_store
 from utils.llm import initialize_llm
 from utils.langfuse_config import configure_langfuse_environment
 
@@ -139,7 +140,7 @@ Answer the user's question based ONLY on the retrieved context above. If the con
         deduplicates, returns top k. Ensures sources match what LLM uses.
         
         Chroma returns cosine distance (0 = identical, 2 = opposite).
-        We convert to similarity: similarity = 1 - distance
+        Qdrant returns cosine similarity directly. Both use the same threshold.
         
         Args:
             query: User query
@@ -152,33 +153,59 @@ Answer the user's question based ONLY on the retrieved context above. If the con
         """
         
         vector_store = self._load_vector_store()
-        
-        # Retrieve k*2 documents (same as RAG tool)
-        docs = vector_store.similarity_search_with_score(query, k=k * 2)
-        
-        # Filter, deduplicate, and return top k (same logic as RAG tool)
-        context_docs = []
-        seen_content = set()
-        
+        query_vector = generate_embedding_for_text(query)
+        candidates: list[Dict[str, Any]] = []
+
+        # Reuse one embedding for the bundled handbook and uploaded Qdrant sources.
+        docs = vector_store.similarity_search_by_vector_with_score(query_vector, k=k * 2)
         for doc, distance in docs:
             similarity = 1.0 - float(distance)
-            
             if similarity >= min_similarity:
-                content_normalized = doc.page_content.strip()
-                
-                if content_normalized not in seen_content:
-                    seen_content.add(content_normalized)
-                    context_docs.append({
+                candidates.append(
+                    {
                         "content": doc.page_content,
-                        "metadata": doc.metadata,
+                        "metadata": dict(doc.metadata),
                         "similarity": similarity,
                         "distance": float(distance),
-                    })
-                    
-                    if len(context_docs) >= k:
-                        break
-        
-        return context_docs
+                    }
+                )
+
+        if os.getenv("QDRANT_URL"):
+            try:
+                uploaded_sources = get_qdrant_source_store().search(
+                    query_vector=query_vector,
+                    agent_name=self.name,
+                    limit=k * 2,
+                )
+                for source in uploaded_sources:
+                    if source.similarity >= min_similarity:
+                        candidates.append(
+                            {
+                                "content": source.content,
+                                "metadata": source.metadata,
+                                "similarity": source.similarity,
+                                "distance": source.distance,
+                            }
+                        )
+            except Exception as exc:
+                # The bundled handbooks remain useful while the external vector service is unavailable.
+                print(f"Warning: Qdrant source retrieval failed for {self.name}: {exc}")
+
+        deduplicated: dict[str, Dict[str, Any]] = {}
+        for candidate in candidates:
+            normalized = candidate["content"].strip()
+            if not normalized:
+                continue
+            previous = deduplicated.get(normalized)
+            if previous is None or candidate["similarity"] > previous["similarity"]:
+                deduplicated[normalized] = candidate
+
+        context_docs = sorted(
+            deduplicated.values(),
+            key=lambda item: item["similarity"],
+            reverse=True,
+        )
+        return context_docs[:k]
     
     @observe(name="agent_process_query")
     def process_query(

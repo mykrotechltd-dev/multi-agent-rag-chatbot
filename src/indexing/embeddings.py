@@ -1,6 +1,10 @@
 """Initialize embeddings and vector stores (Chroma/Faiss) for document chunks."""
 
 import os
+import shutil
+import stat
+import tempfile
+import uuid
 from pathlib import Path
 from typing import List, Union
 
@@ -42,6 +46,50 @@ def _initialize_embeddings_model():
         openai_api_key=api_key,
         openai_api_base=base_url,
     )
+
+
+def _get_writable_chroma_directory(
+    source_directory: Path,
+    handbook_name: str,
+) -> Path:
+    """Copy a bundled Chroma store to Vercel's writable temporary filesystem.
+
+    Vercel function bundles are read-only. Chroma opens its SQLite database in
+    read/write mode, so the deployed index must be copied to /tmp before use.
+    The source index is never modified.
+    """
+    if not (os.getenv("VERCEL") or os.getenv("VERCEL_ENV")):
+        return source_directory
+
+    target_directory = (
+        Path(tempfile.gettempdir())
+        / "multi-agent-rag-chatbot"
+        / "vectorstore"
+        / handbook_name
+    )
+    if not target_directory.exists():
+        target_directory.parent.mkdir(parents=True, exist_ok=True)
+        staging_directory = target_directory.with_name(
+            f"{target_directory.name}-{uuid.uuid4().hex}.copying"
+        )
+        try:
+            shutil.copytree(source_directory, staging_directory)
+            os.replace(staging_directory, target_directory)
+        except Exception:
+            shutil.rmtree(staging_directory, ignore_errors=True)
+            raise
+
+    # copytree preserves source permissions, which may also be read-only.
+    for root, directories, files in os.walk(target_directory):
+        os.chmod(root, os.stat(root).st_mode | stat.S_IWUSR)
+        for name in files:
+            file_path = Path(root) / name
+            os.chmod(file_path, os.stat(file_path).st_mode | stat.S_IWUSR)
+        for name in directories:
+            directory_path = Path(root) / name
+            os.chmod(directory_path, os.stat(directory_path).st_mode | stat.S_IWUSR)
+
+    return target_directory
 
 
 def generate_embeddings(
@@ -168,6 +216,11 @@ def load_vector_store(
                 f"Please run the indexing script to create vector stores."
             )
         
+        persist_directory = _get_writable_chroma_directory(
+            persist_directory,
+            handbook_name,
+        )
+
         vector_store = Chroma(
             persist_directory=str(persist_directory),
             embedding_function=embeddings_model,
